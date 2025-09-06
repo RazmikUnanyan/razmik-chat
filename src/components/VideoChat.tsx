@@ -1,42 +1,37 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef } from "react";
 import Peer from "simple-peer";
 import { Peer as PeerClient } from "peerjs";
 
-interface VideoChatProps {
+interface Props {
     roomId: string;
+    isInitiator: boolean; // первый или второй пользователь
 }
 
-const VideoChat: React.FC<VideoChatProps> = ({ roomId }) => {
+const VideoChat: React.FC<Props> = ({ roomId, isInitiator }) => {
     const localVideo = useRef<HTMLVideoElement>(null);
     const remoteVideo = useRef<HTMLVideoElement>(null);
-    const [peerInstance, setPeerInstance] = useState<Peer.Instance | null>(null);
 
     useEffect(() => {
         const peer = new PeerClient(roomId, {
-            host: "0.peerjs.com",  // бесплатный облачный PeerJS
+            host: "0.peerjs.com",
             port: 443,
             secure: true,
-        });
-
-        peer.on("open", (id) => {
-            console.log("My peer ID:", id);
         });
 
         navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then((stream) => {
             if (localVideo.current) localVideo.current.srcObject = stream;
 
+            // слушаем входящие звонки
             peer.on("call", (call) => {
-                // кто-то звонит нам
                 call.answer(stream);
                 call.on("stream", (remoteStream) => {
                     if (remoteVideo.current) remoteVideo.current.srcObject = remoteStream;
                 });
             });
 
-            // если вы инициатор, можно звонить другому peer по roomId
-            const otherPeerId = prompt("Enter other user's room ID (if exists):");
-            if (otherPeerId) {
-                const call = peer.call(otherPeerId, stream);
+            // если мы второй пользователь (не инициатор), звонок первому
+            if (!isInitiator) {
+                const call = peer.call(roomId, stream); // звонок по ID комнаты
                 call.on("stream", (remoteStream) => {
                     if (remoteVideo.current) remoteVideo.current.srcObject = remoteStream;
                 });
@@ -46,7 +41,7 @@ const VideoChat: React.FC<VideoChatProps> = ({ roomId }) => {
         return () => {
             peer.disconnect();
         };
-    }, [roomId]);
+    }, [roomId, isInitiator]);
 
     return (
         <div>

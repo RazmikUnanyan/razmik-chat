@@ -1,9 +1,10 @@
 import React, { useState } from "react";
-import VideoChat from "./components/VideoChat";
+import VideoChat from "./VideoChat";
 
 function App() {
     const [roomId, setRoomId] = useState("");
     const [joined, setJoined] = useState(false);
+    const [isInitiator, setIsInitiator] = useState(true);
 
     return (
         <div>
@@ -15,10 +16,25 @@ function App() {
                         value={roomId}
                         onChange={(e) => setRoomId(e.target.value)}
                     />
-                    <button onClick={() => setJoined(true)}>Join Room</button>
+                    <button
+                        onClick={() => {
+                            setIsInitiator(true); // первый пользователь
+                            setJoined(true);
+                        }}
+                    >
+                        Create Room
+                    </button>
+                    <button
+                        onClick={() => {
+                            setIsInitiator(false); // второй пользователь
+                            setJoined(true);
+                        }}
+                    >
+                        Join Room
+                    </button>
                 </div>
             ) : (
-                <VideoChat roomId={roomId} />
+                <VideoChat roomId={roomId} isInitiator={isInitiator} />
             )}
         </div>
     );

@@ -13,7 +13,7 @@ const Home: React.FC = () => {
 
     return (
         <div style={{ padding: 20 }}>
-            <h1>WebRTC Video Chat</h1>
+            <h1>Размик семейный чат</h1>
             <input
                 type="text"
                 placeholder="Enter room ID (optional)"

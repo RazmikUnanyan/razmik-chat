@@ -1,65 +1,58 @@
 import React, { useEffect, useRef, useState } from "react";
 import Peer from "simple-peer";
+import { Peer as PeerClient } from "peerjs";
 
-const VideoChat: React.FC<{ roomId: string }> = ({ roomId }) => {
-    const [ws, setWs] = useState<WebSocket | null>(null);
-    const [peer, setPeer] = useState<Peer.Instance | null>(null);
+interface VideoChatProps {
+    roomId: string;
+}
+
+const VideoChat: React.FC<VideoChatProps> = ({ roomId }) => {
     const localVideo = useRef<HTMLVideoElement>(null);
     const remoteVideo = useRef<HTMLVideoElement>(null);
+    const [peerInstance, setPeerInstance] = useState<Peer.Instance | null>(null);
 
     useEffect(() => {
-        const socket = new WebSocket("https://razmik-chat.onrender.com/");
-        setWs(socket);
+        const peer = new PeerClient(roomId, {
+            host: "0.peerjs.com",  // бесплатный облачный PeerJS
+            port: 443,
+            secure: true,
+        });
 
-        socket.onopen = () => {
-            socket.send(JSON.stringify({ type: "join", roomId }));
-        };
+        peer.on("open", (id) => {
+            console.log("My peer ID:", id);
+        });
 
-        socket.onmessage = (msg) => {
-            const data = JSON.parse(msg.data);
+        navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then((stream) => {
+            if (localVideo.current) localVideo.current.srcObject = stream;
 
-            if (data.type === "user-joined") {
-                // создаем peer инициатором
-                createPeer(true);
+            peer.on("call", (call) => {
+                // кто-то звонит нам
+                call.answer(stream);
+                call.on("stream", (remoteStream) => {
+                    if (remoteVideo.current) remoteVideo.current.srcObject = remoteStream;
+                });
+            });
+
+            // если вы инициатор, можно звонить другому peer по roomId
+            const otherPeerId = prompt("Enter other user's room ID (if exists):");
+            if (otherPeerId) {
+                const call = peer.call(otherPeerId, stream);
+                call.on("stream", (remoteStream) => {
+                    if (remoteVideo.current) remoteVideo.current.srcObject = remoteStream;
+                });
             }
-
-            if (data.type === "signal") {
-                peer?.signal(data.signal);
-            }
-        };
+        });
 
         return () => {
-            socket.close();
+            peer.disconnect();
         };
     }, [roomId]);
-
-    const createPeer = (initiator: boolean) => {
-        navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then(stream => {
-            if (localVideo.current) {
-                localVideo.current.srcObject = stream;
-            }
-
-            const newPeer = new Peer({ initiator, trickle: false, stream });
-
-            newPeer.on("signal", (signal) => {
-                ws?.send(JSON.stringify({ type: "signal", roomId, signal }));
-            });
-
-            newPeer.on("stream", (remoteStream) => {
-                if (remoteVideo.current) {
-                    remoteVideo.current.srcObject = remoteStream;
-                }
-            });
-
-            setPeer(newPeer);
-        });
-    };
 
     return (
         <div>
             <h2>Room: {roomId}</h2>
-            <video ref={localVideo} autoPlay playsInline muted style={{ width: "300px" }} />
-            <video ref={remoteVideo} autoPlay playsInline style={{ width: "300px" }} />
+            <video ref={localVideo} autoPlay playsInline muted style={{ width: 300 }} />
+            <video ref={remoteVideo} autoPlay playsInline style={{ width: 300 }} />
         </div>
     );
 };

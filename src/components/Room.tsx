@@ -13,7 +13,7 @@ const Room: React.FC<RoomProps> = ({ roomId }) => {
 
     useEffect(() => {
         // создаём уникальный peer ID
-        const peer = new PeerClient(undefined, {
+        const peer = new PeerClient('', {
             host: "0.peerjs.com",
             port: 443,
             secure: true,

@@ -9,7 +9,7 @@ const VideoChat: React.FC = () => {
     const [initiator, setInitiator] = useState(false);
 
     useEffect(() => {
-        wsRef.current = new WebSocket("ws://localhost:8080");
+        wsRef.current = new WebSocket("https://razmik-chat.onrender.com/");
 
         wsRef.current.onmessage = (event) => {
             const data = JSON.parse(event.data);

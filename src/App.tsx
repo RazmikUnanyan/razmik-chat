@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import VideoChat from "./VideoChat";
+import VideoChat from "./components/VideoChat";
 
 function App() {
     const [roomId, setRoomId] = useState("");

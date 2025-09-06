@@ -1,81 +1,65 @@
 import React, { useEffect, useRef, useState } from "react";
 import Peer from "simple-peer";
 
-const VideoChat: React.FC = () => {
-    const localVideoRef = useRef<HTMLVideoElement>(null);
-    const remoteVideoRef = useRef<HTMLVideoElement>(null);
-    const wsRef = useRef<WebSocket | null>(null);
-    const peerRef = useRef<Peer.Instance | null>(null);
-    const [initiator, setInitiator] = useState(false);
+const VideoChat: React.FC<{ roomId: string }> = ({ roomId }) => {
+    const [ws, setWs] = useState<WebSocket | null>(null);
+    const [peer, setPeer] = useState<Peer.Instance | null>(null);
+    const localVideo = useRef<HTMLVideoElement>(null);
+    const remoteVideo = useRef<HTMLVideoElement>(null);
 
     useEffect(() => {
-        wsRef.current = new WebSocket("https://razmik-chat.onrender.com/");
+        const socket = new WebSocket("ws://localhost:8080");
+        setWs(socket);
 
-        wsRef.current.onmessage = (event) => {
-            const data = JSON.parse(event.data);
-            if (peerRef.current) {
-                peerRef.current.signal(data);
+        socket.onopen = () => {
+            socket.send(JSON.stringify({ type: "join", roomId }));
+        };
+
+        socket.onmessage = (msg) => {
+            const data = JSON.parse(msg.data);
+
+            if (data.type === "user-joined") {
+                // создаем peer инициатором
+                createPeer(true);
+            }
+
+            if (data.type === "signal") {
+                peer?.signal(data.signal);
             }
         };
 
         return () => {
-            wsRef.current?.close();
+            socket.close();
         };
-    }, []);
+    }, [roomId]);
 
-    const startCall = async () => {
-        setInitiator(true);
+    const createPeer = (initiator: boolean) => {
+        navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then(stream => {
+            if (localVideo.current) {
+                localVideo.current.srcObject = stream;
+            }
 
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-        localVideoRef.current!.srcObject = stream;
+            const newPeer = new Peer({ initiator, trickle: false, stream });
 
-        const peer = new Peer({
-            initiator: true,
-            trickle: true,
-            stream,
+            newPeer.on("signal", (signal) => {
+                ws?.send(JSON.stringify({ type: "signal", roomId, signal }));
+            });
+
+            newPeer.on("stream", (remoteStream) => {
+                if (remoteVideo.current) {
+                    remoteVideo.current.srcObject = remoteStream;
+                }
+            });
+
+            setPeer(newPeer);
         });
-
-        peer.on("signal", (data) => {
-            wsRef.current?.send(JSON.stringify(data));
-        });
-
-        peer.on("stream", (remoteStream) => {
-            remoteVideoRef.current!.srcObject = remoteStream;
-        });
-
-        peerRef.current = peer;
-    };
-
-    const answerCall = async () => {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-        localVideoRef.current!.srcObject = stream;
-
-        const peer = new Peer({
-            initiator: false,
-            trickle: true,
-            stream,
-        });
-
-        peer.on("signal", (data) => {
-            wsRef.current?.send(JSON.stringify(data));
-        });
-
-        peer.on("stream", (remoteStream) => {
-            remoteVideoRef.current!.srcObject = remoteStream;
-        });
-
-        peerRef.current = peer;
     };
 
     return (
         <div>
-            <h2>Chat</h2>
-            <div>
-                <video ref={localVideoRef} autoPlay playsInline muted style={{ width: "45%" }} />
-                <video ref={remoteVideoRef} autoPlay playsInline style={{ width: "45%" }} />
-            </div>
-            {!initiator && <button onClick={startCall}>Start Call</button>}
-            <button onClick={answerCall}>Answer Call</button>
+            <h2>Room: {roomId}</h2>
+            <video ref={localVideo} autoPlay playsInline muted style={{ width: "300px" }} />
+            <video ref={remoteVideo} autoPlay playsInline style={{ width: "300px" }} />
         </div>
     );
 };

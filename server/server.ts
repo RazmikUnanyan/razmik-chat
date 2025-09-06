@@ -1,24 +1,48 @@
-import { WebSocketServer } from "ws";
+import { WebSocketServer, WebSocket } from "ws";
 
-const PORT = process.env.PORT || 8080;
-const wss = new WebSocketServer({ port: PORT });
+const wss = new WebSocketServer({ port: 8080 });
 
-let clients = [];
+// Комнаты: { roomId: [clients] }
+const rooms: Record<string, WebSocket[]> = {};
 
-wss.on("connection", (ws) => {
-    clients.push(ws);
+wss.on("connection", (ws: WebSocket) => {
+    ws.on("message", (message: string) => {
+        const data = JSON.parse(message);
 
-    ws.on("message", (message) => {
-        clients.forEach((client) => {
-            if (client !== ws && client.readyState === client.OPEN) {
-                client.send(message.toString());
+        if (data.type === "join") {
+            const { roomId } = data;
+            if (!rooms[roomId]) {
+                rooms[roomId] = [];
             }
-        });
+            rooms[roomId].push(ws);
+
+            console.log(`User joined room: ${roomId}`);
+
+            // Сообщаем остальным участникам
+            rooms[roomId].forEach(client => {
+                if (client !== ws && client.readyState === WebSocket.OPEN) {
+                    client.send(JSON.stringify({ type: "user-joined" }));
+                }
+            });
+        }
+
+        if (data.type === "signal") {
+            const { roomId, signal } = data;
+            rooms[roomId]?.forEach(client => {
+                if (client !== ws && client.readyState === WebSocket.OPEN) {
+                    client.send(JSON.stringify({ type: "signal", signal }));
+                }
+            });
+        }
     });
 
     ws.on("close", () => {
-        clients = clients.filter((c) => c !== ws);
+        // Удаляем из комнат
+        for (const roomId in rooms) {
+            rooms[roomId] = rooms[roomId].filter(c => c !== ws);
+            if (rooms[roomId].length === 0) delete rooms[roomId];
+        }
     });
 });
 
-console.log(`Signaling server running on port ${PORT}`);
+console.log("WebRTC signaling server running on ws://localhost:8080");

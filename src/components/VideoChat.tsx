@@ -8,7 +8,7 @@ const VideoChat: React.FC<{ roomId: string }> = ({ roomId }) => {
     const remoteVideo = useRef<HTMLVideoElement>(null);
 
     useEffect(() => {
-        const socket = new WebSocket("ws://localhost:8080");
+        const socket = new WebSocket("https://razmik-chat.onrender.com/");
         setWs(socket);
 
         socket.onopen = () => {

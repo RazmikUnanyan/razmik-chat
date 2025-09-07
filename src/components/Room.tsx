@@ -23,10 +23,9 @@ const Room: React.FC<RoomProps> = ({ roomId }) => {
     const [micOn, setMicOn] = useState(true);
     const [camOn, setCamOn] = useState(true);
     const localStream = useRef<MediaStream | null>(null);
-    const [otherPeerId, setOtherPeerId] = useState<string>("");
 
     const navigate = useNavigate();
-    const [searchParams, setSearchParams] = useSearchParams();
+    const [searchParams] = useSearchParams();
 
     // Генерируем ссылку с peerId
     const roomUrl = `${window.location.origin}/room/${roomId}?peerId=${peerId}`;
@@ -44,8 +43,8 @@ const Room: React.FC<RoomProps> = ({ roomId }) => {
 
             // Если в URL уже есть peerId другого пользователя, сразу подключаемся
             const urlOtherPeer = searchParams.get("peerId");
-            if (urlOtherPeer && urlOtherPeer !== id) {
-                const call = peer.call(urlOtherPeer, localStream.current!);
+            if (urlOtherPeer && urlOtherPeer !== id && localStream.current) {
+                const call = peer.call(urlOtherPeer, localStream.current);
                 call?.on("stream", (remoteStream) => {
                     if (remoteVideo.current) remoteVideo.current.srcObject = remoteStream;
                 });
@@ -65,24 +64,13 @@ const Room: React.FC<RoomProps> = ({ roomId }) => {
         });
 
         return () => {
+            // Очистка при размонтировании
+            localStream.current?.getTracks().forEach((track) => track.stop());
+            if (localVideo.current) localVideo.current.srcObject = null;
+            if (remoteVideo.current) remoteVideo.current.srcObject = null;
             peer.disconnect();
         };
     }, [roomId, searchParams]);
-
-    const connectToPeer = () => {
-        if (!otherPeerId) return;
-        const peer = new PeerClient("", {
-            host: "0.peerjs.com",
-            port: 443,
-            secure: true,
-        });
-        if (localStream.current) {
-            const call = peer.call(otherPeerId, localStream.current);
-            call?.on("stream", (remoteStream) => {
-                if (remoteVideo.current) remoteVideo.current.srcObject = remoteStream;
-            });
-        }
-    };
 
     const toggleMic = () => {
         if (localStream.current) {
@@ -99,8 +87,20 @@ const Room: React.FC<RoomProps> = ({ roomId }) => {
     };
 
     const leaveCall = () => {
-        localStream.current?.getTracks().forEach((track) => track.stop());
-        window.location.reload();
+        // Останавливаем все локальные треки
+        if (localStream.current) {
+            localStream.current.getTracks().forEach((track) => track.stop());
+        }
+
+        // Отвязываем видео
+        if (localVideo.current) localVideo.current.srcObject = null;
+        if (remoteVideo.current) remoteVideo.current.srcObject = null;
+
+        setMicOn(false);
+        setCamOn(false);
+
+        // Редирект на главную
+        navigate("/");
     };
 
     return (
@@ -137,17 +137,6 @@ const Room: React.FC<RoomProps> = ({ roomId }) => {
                         </Tooltip>
                     )}
                 </CopyButton>
-
-                {/*/!* Для ручного подключения к другому peer *!/*/}
-                {/*<TextInput*/}
-                {/*    placeholder="Введите Peer ID друга"*/}
-                {/*    mt="sm"*/}
-                {/*    value={otherPeerId}*/}
-                {/*    onChange={(e) => setOtherPeerId(e.currentTarget.value)}*/}
-                {/*/>*/}
-                {/*<Button mt="xs" onClick={connectToPeer} fullWidth>*/}
-                {/*    Подключиться к другу*/}
-                {/*</Button>*/}
             </div>
         </div>
     );

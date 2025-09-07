@@ -7,8 +7,9 @@ import {
     useParams,
 } from "react-router-dom";
 
-import { MantineProvider, Button, TextInput, Container, Stack, Title } from "@mantine/core";
+import {MantineProvider, Button, TextInput, Container, Stack, Title, Group} from "@mantine/core";
 import Room from "./components/Room";
+import {IconDoorEnter, IconVideoPlus} from "@tabler/icons-react";
 
 const Home: React.FC = () => {
     const navigate = useNavigate();
@@ -20,21 +21,29 @@ const Home: React.FC = () => {
     };
 
     return (
-        <Container size="xs" style={{ paddingTop: 50 }}>
-            <Stack gap="md">
+        <Container
+            size="xs"
+            style={{
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+                minHeight: "100vh",
+            }}
+        >
+            <Stack gap="xl" style={{ width: "100%" }}>
                 <Title order={2} ta="center">
-                    Размик — семейный чат
+                    Razmik Chat
                 </Title>
 
-                <TextInput
-                    placeholder="Введите ID комнаты (необязательно)"
-                    value={roomId}
-                    onChange={(e) => setRoomId(e.currentTarget.value)}
-                />
-
-                <Button onClick={createRoom} fullWidth>
-                    Join / Create Room
-                </Button>
+                <Group grow>
+                    <Button
+                        leftSection={<IconVideoPlus size={18} />}
+                        color="blue"
+                        onClick={createRoom}
+                    >
+                        Create Room
+                    </Button>
+                </Group>
             </Stack>
         </Container>
     );

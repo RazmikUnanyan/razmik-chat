@@ -1,5 +1,13 @@
 import React from "react";
-import { BrowserRouter as Router, Routes, Route, useNavigate, useParams } from "react-router-dom";
+import {
+    BrowserRouter as Router,
+    Routes,
+    Route,
+    useNavigate,
+    useParams,
+} from "react-router-dom";
+
+import { MantineProvider, Button, TextInput, Container, Stack, Title } from "@mantine/core";
 import Room from "./components/Room";
 
 const Home: React.FC = () => {
@@ -12,29 +20,23 @@ const Home: React.FC = () => {
     };
 
     return (
-        <div style={{ padding: 20 }}>
-            <h1>Размик семейный чат</h1>
-            <input
-                type="text"
-                placeholder="Enter room ID (optional)"
-                value={roomId}
-                onChange={(e) => setRoomId(e.target.value)}
-            />
-            <button onClick={createRoom} style={{ marginLeft: 10 }}>
-                Join / Create Room
-            </button>
-        </div>
-    );
-};
+        <Container size="xs" style={{ paddingTop: 50 }}>
+            <Stack gap="md">
+                <Title order={2} ta="center">
+                    Размик — семейный чат
+                </Title>
 
-const App: React.FC = () => {
-    return (
-        <Router>
-            <Routes>
-                <Route path="/" element={<Home />} />
-                <Route path="/room/:id" element={<RoomWrapper />} />
-            </Routes>
-        </Router>
+                <TextInput
+                    placeholder="Введите ID комнаты (необязательно)"
+                    value={roomId}
+                    onChange={(e) => setRoomId(e.currentTarget.value)}
+                />
+
+                <Button onClick={createRoom} fullWidth>
+                    Join / Create Room
+                </Button>
+            </Stack>
+        </Container>
     );
 };
 
@@ -43,6 +45,19 @@ const RoomWrapper: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     if (!id) return <div>Room ID missing</div>;
     return <Room roomId={id} />;
+};
+
+const App: React.FC = () => {
+    return (
+        <MantineProvider>
+            <Router>
+                <Routes>
+                    <Route path="/" element={<Home />} />
+                    <Route path="/room/:id" element={<RoomWrapper />} />
+                </Routes>
+            </Router>
+        </MantineProvider>
+    );
 };
 
 export default App;

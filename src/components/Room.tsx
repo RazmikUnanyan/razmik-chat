@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Peer as PeerClient } from "peerjs";
-import { ActionIcon, Group, Paper, Button, TextInput, CopyButton, Tooltip } from "@mantine/core";
+import { ActionIcon, Group, Button, CopyButton, Tooltip } from "@mantine/core";
 import {
     IconMicrophone,
     IconMicrophoneOff,

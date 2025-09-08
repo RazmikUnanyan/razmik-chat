@@ -1,71 +1,62 @@
-import React from "react";
-import {
-    BrowserRouter as Router,
-    Routes,
-    Route,
-    useNavigate,
-    useParams,
-} from "react-router-dom";
-
-import {MantineProvider, Button, TextInput, Container, Stack, Title, Group} from "@mantine/core";
+import React, { useEffect, useState } from "react";
+import { TextInput, Button, Container, Group, CopyButton, Tooltip } from "@mantine/core";
+import {Route, Routes, useNavigate } from "react-router-dom";
+import { v4 as uuidv4 } from "uuid";
+import { IconCopy } from "@tabler/icons-react";
 import Room from "./components/Room";
-import {IconDoorEnter, IconVideoPlus} from "@tabler/icons-react";
 
 const Home: React.FC = () => {
     const navigate = useNavigate();
-    const [roomId, setRoomId] = React.useState("");
+    const [roomId, setRoomId] = useState("");
 
-    const createRoom = () => {
-        const id = roomId || Math.floor(Math.random() * 100000).toString();
-        navigate(`/room/${id}`);
+    useEffect(() => {
+        const savedId = localStorage.getItem("my-room-id");
+        if (savedId) setRoomId(savedId);
+    }, []);
+
+    const handleJoin = () => {
+        let finalId = roomId.trim();
+        if (!finalId) {
+            finalId = uuidv4();
+        }
+        localStorage.setItem("my-room-id", finalId);
+        navigate(`/room/${finalId}`);
     };
 
-    return (
-        <Container
-            size="xs"
-            style={{
-                display: "flex",
-                justifyContent: "center",
-                alignItems: "center",
-                minHeight: "100vh",
-            }}
-        >
-            <Stack gap="xl" style={{ width: "100%" }}>
-                <Title order={2} ta="center">
-                    Razmik Chat
-                </Title>
+    const roomUrl = `${window.location.origin}/room/${roomId || localStorage.getItem("my-room-id") || ""}`;
 
-                <Group grow>
-                    <Button
-                        leftSection={<IconVideoPlus size={18} />}
-                        color="blue"
-                        onClick={createRoom}
-                    >
-                        Create Room
-                    </Button>
-                </Group>
-            </Stack>
+    return (
+        <Container size="xs" style={{ marginTop: 60 }}>
+            <Group flex="column" gap="md">
+                <TextInput
+                    placeholder="Введите ID комнаты (или оставьте пустым)"
+                    value={roomId}
+                    onChange={(e) => setRoomId(e.currentTarget.value)}
+                    style={{ width: "100%" }}
+                />
+                <Button fullWidth onClick={handleJoin}>Войти в комнату</Button>
+
+                <CopyButton value={roomUrl}>
+                    {({ copied, copy }) => (
+                        <Tooltip label={copied ? "Скопировано!" : "Копировать ссылку"} withArrow>
+                            <Button leftSection={<IconCopy size={16} />} variant="default" onClick={copy}>
+                                {copied ? "Ссылка скопирована" : "Скопировать ссылку"}
+                            </Button>
+                        </Tooltip>
+                    )}
+                </CopyButton>
+            </Group>
         </Container>
     );
 };
 
-// Обертка для получения roomId из URL
-const RoomWrapper: React.FC = () => {
-    const { id } = useParams<{ id: string }>();
-    if (!id) return <div>Room ID missing</div>;
-    return <Room roomId={id} />;
-};
 
 const App: React.FC = () => {
     return (
-        <MantineProvider>
-            <Router>
-                <Routes>
-                    <Route path="/" element={<Home />} />
-                    <Route path="/room/:id" element={<RoomWrapper />} />
-                </Routes>
-            </Router>
-        </MantineProvider>
+        <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/room/:roomId" element={<Room />} />
+        </Routes>
     );
 };
 
